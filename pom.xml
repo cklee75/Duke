@@ -1,317 +1,297 @@
-<!--
-COMMANDS
+<!-- COMMANDS mvn assembly:single -> builds release mvn javadoc:javadoc -> 
+	builds javadoc in target/site/apidocs mvn cobertura:cobertura -> instrument, 
+	test, generate report mvn findbugs:findbugs findbugs:gui -> open findbugs 
+	gui TO MAKE RELEASES (first check out into empty directory; mvn complains 
+	if untracked files) (leave version in pom.xml unchanged; maven will update 
+	it for you) mvn release:clean mvn release:prepare mvn release:perform edit 
+	pom to 1.0 mvn assembly:single upload to Github delete directory go to normal 
+	Duke directory git pull then release to maven central: https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide#SonatypeOSSMavenRepositoryUsageGuide-8a.ReleaseIt 
+	TO PUBLISH SNAPSHOTS mvn clean deploy -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>no.priv.garshol.duke</groupId>
+	<artifactId>duke</artifactId>
+	<packaging>jar</packaging>
+	<version>1.3-SNAPSHOT</version>
+	<name>Duke</name>
+	<description>Duke is a configurable record linkage engine.</description>
+	<url>https://github.com/larsga/Duke</url>
 
-  mvn assembly:single      ->  builds release
-  mvn javadoc:javadoc      ->  builds javadoc in target/site/apidocs
-  mvn cobertura:cobertura  ->  instrument, test, generate report
-  mvn findbugs:findbugs findbugs:gui -> open findbugs gui
+	<dependencies>
+		<!-- <dependency> <groupId>org.apache.lucene</groupId> <artifactId>lucene-core</artifactId> 
+			<version>4.0.0</version> </dependency> -->
 
-TO MAKE RELEASES
+		<!-- necessary to get KeywordAnalyzer and StandardAnalyzer -->
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-analyzers-common</artifactId>
+			<version>4.0.0</version>
+		</dependency>
 
-  (first check out into empty directory; mvn complains if untracked files)
-  (leave version in pom.xml unchanged; maven will update it for you)
-  mvn release:clean
-  mvn release:prepare
-  mvn release:perform
+		<!-- necessary for spatial searches NOTE: the code is written so that Duke 
+			will work without it, as long as you don't use spatial searches -->
+		<dependency>
+			<groupId>org.apache.lucene</groupId>
+			<artifactId>lucene-spatial</artifactId>
+			<version>4.0.0</version>
+		</dependency>
 
-  edit pom to 1.0
-  mvn assembly:single
-  upload to Github
-  delete directory
+		<!-- only needed if you use the MapDBBlockingDatabase -->
+		<dependency>
+			<groupId>org.mapdb</groupId>
+			<artifactId>mapdb</artifactId>
+			<version>0.9.13</version>
+		</dependency>
 
-  go to normal Duke directory
-  git pull
+		<!-- JSON support -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-core</artifactId>
+			<version>2.3.2</version>
+		</dependency>
 
-  then release to maven central:
-    https://docs.sonatype.org/display/Repository/Sonatype+OSS+Maven+Repository+Usage+Guide#SonatypeOSSMavenRepositoryUsageGuide-8a.ReleaseIt
+		<!-- ===== TEST DEPENDENCIES -->
 
-TO PUBLISH SNAPSHOTS
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
 
-  mvn clean deploy
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.3.176</version>
+			<scope>test</scope>
+		</dependency>
 
--->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>no.priv.garshol.duke</groupId>
-  <artifactId>duke</artifactId>
-  <packaging>jar</packaging>
-  <version>1.3-SNAPSHOT</version>
-  <name>Duke</name>
-  <description>Duke is a configurable record linkage engine.</description>
-  <url>https://github.com/larsga/Duke</url>
+		<!-- ===== SERVER DEPENDENCIES -->
 
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.lucene</groupId>
-      <artifactId>lucene-core</artifactId>
-      <version>4.0.0</version>
-    </dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>servlet-api</artifactId>
+			<version>2.4</version>
+			<!-- servlet container provides it, so no need to include in .jar -->
+			<scope>provided</scope>
+		</dependency>
 
-    <!-- necessary to get KeywordAnalyzer and StandardAnalyzer -->
-    <dependency>
-      <groupId>org.apache.lucene</groupId>
-      <artifactId>lucene-analyzers-common</artifactId>
-      <version>4.0.0</version>
-    </dependency>
+		<!-- used for one optional server component -->
+		<dependency>
+			<groupId>org.codehaus.fabric3.api</groupId>
+			<artifactId>commonj</artifactId>
+			<version>1.1.1</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
 
-    <!-- necessary for spatial searches
-         NOTE: the code is written so that Duke will work without it,
-               as long as you don't use spatial searches -->
-    <dependency>
-      <groupId>org.apache.lucene</groupId>
-      <artifactId>lucene-spatial</artifactId>
-      <version>4.0.0</version>
-    </dependency>
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<configuration>
+						<source>${java.version}</source>
+						<target>${java.version}</target>
+						<fork>true</fork>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<!-- the next setting turns on variable substitution -->
+				<filtering>true</filtering>
+			</resource>
+		</resources>
 
-    <!-- only needed if you use the MapDBBlockingDatabase -->
-    <dependency>
-      <groupId>org.mapdb</groupId>
-      <artifactId>mapdb</artifactId>
-      <version>0.9.13</version>
-    </dependency>
+		<plugins>
 
-    <!-- JSON support -->
-    <dependency>
-      <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-core</artifactId>
-      <version>2.3.2</version>
-    </dependency>
+			<!-- this plugin builds the duke.zip -->
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.2.1</version>
+				<configuration>
+					<descriptors>
+						<descriptor>src/main/assembly/dep.xml</descriptor>
+					</descriptors>
+				</configuration>
+			</plugin>
 
-    <!-- ===== TEST DEPENDENCIES -->
+			<!-- this plugin configures the manifest file -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.3.2</version>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<Main-Class>no.priv.garshol.duke.Duke</Main-Class>
+							<Implementation-Title>Duke</Implementation-Title>
+							<Implementation-Version>${project.version}</Implementation-Version>
+							<Implementation-Build>${buildNumber}</Implementation-Build>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
 
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
-    </dependency>
+			<!-- this plugin sets the build number in duke.properties -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>buildnumber-maven-plugin</artifactId>
+				<version>1.2</version>
+				<executions>
+					<execution>
+						<phase>validate</phase>
+						<goals>
+							<goal>create</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<doCheck>false</doCheck>
+					<doUpdate>false</doUpdate>
+					<format>{0,number} ({1,date,yyyy-MM-dd})</format>
+					<items>
+						<item>buildNumber0</item>
+						<item>timestamp</item>
+					</items>
+				</configuration>
+			</plugin>
 
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <version>1.3.176</version>
-      <scope>test</scope>
-    </dependency>
+			<!-- declaring specific version to avoid Maven 2.x problems -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.8.1</version>
+			</plugin>
 
-    <!-- ===== SERVER DEPENDENCIES -->
+			<!-- for integration tests -->
+			<plugin>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.16</version>
+				<executions>
+					<execution>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
-    <dependency>
-      <groupId>javax.servlet</groupId>
-      <artifactId>servlet-api</artifactId>
-      <version>2.4</version>
-      <!-- servlet container provides it, so no need to include in .jar -->
-      <scope>provided</scope>
-    </dependency>
+	<!-- adding the Sonatype stuff to a profile, so it can be turned off -->
+	<profiles>
+		<profile>
+			<id>sonatype</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 
-    <!-- used for one optional server component -->
-    <dependency>
-      <groupId>org.codehaus.fabric3.api</groupId>
-      <artifactId>commonj</artifactId>
-      <version>1.1.1</version>
-      <scope>provided</scope>
-    </dependency>
-  </dependencies>
+			<build>
+				<plugins>
+					<!-- this plugin is used to sign releases -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.4</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
 
-  <build>
-    <resources>
-      <resource>
-        <directory>src/main/resources</directory>
-        <!-- the next setting turns on variable substitution -->
-        <filtering>true</filtering>
-      </resource>
-    </resources>
+					<!-- generating sources.jar (for sonatype) -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<version>2.2.1</version>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
 
-    <plugins>
-      <!-- this plugin builds the duke.zip -->
-      <plugin>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2.1</version>
-        <configuration>
-          <descriptors>
-            <descriptor>src/main/assembly/dep.xml</descriptor>
-          </descriptors>
-        </configuration>
-      </plugin>
+					<!-- generating javadoc.jar (for sonatype) -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<version>2.9</version>
+						<executions>
+							<execution>
+								<id>attach-javadoc</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 
-      <!-- this plugin configures the manifest file -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>2.3.2</version>
-        <configuration>
-          <archive>
-            <manifestEntries>
-              <Main-Class>no.priv.garshol.duke.Duke</Main-Class>
-              <Implementation-Title>Duke</Implementation-Title>
-              <Implementation-Version>${project.version}</Implementation-Version>
-              <Implementation-Build>${buildNumber}</Implementation-Build>
-            </manifestEntries>
-            </archive>
-        </configuration>
-      </plugin>
+		<profile>
+			<id>fast</id> <!-- skips all the Sonatype stuff -->
 
-      <!-- this plugin sets the build number in duke.properties -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>buildnumber-maven-plugin</artifactId>
-        <version>1.2</version>
-        <executions>
-          <execution>
-            <phase>validate</phase>
-            <goals>
-              <goal>create</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <doCheck>false</doCheck>
-          <doUpdate>false</doUpdate>
-          <format>{0,number} ({1,date,yyyy-MM-dd})</format>
-          <items>
-            <item>buildNumber0</item>
-            <item>timestamp</item>
-          </items>
-        </configuration>
-      </plugin>
+			<activation> <!-- if we don't test, don't sign -->
+				<property>
+					<name>skipTests</name>
+					<value>true</value>
+				</property>
+			</activation>
+		</profile>
+	</profiles>
 
-      <!-- set java version to 1.6 -->
-      <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-compiler-plugin</artifactId>
-	<version>2.3.2</version>
-	<configuration>
-	  <source>1.6</source>
-	  <target>1.6</target>
-	</configuration>
-      </plugin>
+	<!-- this is necessary to get the buildnumber plugin to work -->
+	<scm>
+		<connection>scm:git:git@github.com:larsga/Duke.git</connection>
+		<developerConnection>scm:git:git@github.com:larsga/Duke.git</developerConnection>
+		<url>https://github.com/larsga/Duke</url>
+	</scm>
 
-      <!-- declaring specific version to avoid Maven 2.x problems -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.8.1</version>
-      </plugin>
+	<!-- the below is included because Sonatype hosting requires it -->
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
 
-      <!-- for integration tests -->
-      <plugin>
-        <artifactId>maven-failsafe-plugin</artifactId>
-        <version>2.16</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>integration-test</goal>
-              <goal>verify</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
+	<developers>
+		<developer>
+			<id>larsga</id>
+			<name>Lars Marius Garshol</name>
+			<email>larsga@garshol.priv.no</email>
+			<url>http://www.garshol.priv.no</url>
+			<roles>
+				<role>architect</role>
+				<role>developer</role>
+			</roles>
+			<timezone>+1</timezone>
+		</developer>
+	</developers>
 
-  <!-- adding the Sonatype stuff to a profile, so it can be turned off -->
-  <profiles>
-    <profile>
-      <id>sonatype</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
-
-      <build>
-      <plugins>
-        <!-- this plugin is used to sign releases -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-gpg-plugin</artifactId>
-          <version>1.4</version>
-          <executions>
-            <execution>
-              <id>sign-artifacts</id>
-              <phase>verify</phase>
-              <goals>
-                <goal>sign</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-
-        <!-- generating sources.jar (for sonatype) -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-source-plugin</artifactId>
-          <version>2.2.1</version>
-          <executions>
-            <execution>
-              <id>attach-sources</id>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-
-        <!-- generating javadoc.jar (for sonatype) -->
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>2.9</version>
-          <executions>
-            <execution>
-              <id>attach-javadoc</id>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
-      </plugins>
-      </build>
-    </profile>
-
-    <profile>
-      <id>fast</id> <!-- skips all the Sonatype stuff -->
-
-      <activation> <!-- if we don't test, don't sign -->
-        <property>
-          <name>skipTests</name>
-          <value>true</value>
-        </property>
-      </activation>
-    </profile>
-  </profiles>
-
-  <!-- this is necessary to get the buildnumber plugin to work -->
-  <scm>
-    <connection>scm:git:git@github.com:larsga/Duke.git</connection>
-    <developerConnection>scm:git:git@github.com:larsga/Duke.git</developerConnection>
-    <url>https://github.com/larsga/Duke</url>
-  </scm>
-
-  <!-- the below is included because Sonatype hosting requires it -->
-  <licenses>
-    <license>
-      <name>The Apache Software License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-
-  <developers>
-    <developer>
-      <id>larsga</id>
-      <name>Lars Marius Garshol</name>
-      <email>larsga@garshol.priv.no</email>
-      <url>http://www.garshol.priv.no</url>
-      <roles>
-        <role>architect</role>
-        <role>developer</role>
-      </roles>
-      <timezone>+1</timezone>
-    </developer>
-  </developers>
-
-  <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-  </parent>
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
+	<properties>
+		<java.version>1.7</java.version>
+	</properties>
 </project>

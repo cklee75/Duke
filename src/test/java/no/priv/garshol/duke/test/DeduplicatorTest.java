@@ -1,30 +1,27 @@
 
 package no.priv.garshol.duke.test;
 
-import org.junit.Test;
-import org.junit.After;
-import org.junit.Before;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 
-import java.util.List;
-import java.util.Iterator;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 
-import no.priv.garshol.duke.Record;
-import no.priv.garshol.duke.Property;
-import no.priv.garshol.duke.Processor;
-import no.priv.garshol.duke.PropertyImpl;
-import no.priv.garshol.duke.RecordIterator;
 import no.priv.garshol.duke.ConfigurationImpl;
+import no.priv.garshol.duke.Processor;
+import no.priv.garshol.duke.Property;
+import no.priv.garshol.duke.PropertyImpl;
+import no.priv.garshol.duke.Record;
+import no.priv.garshol.duke.RecordIterator;
 import no.priv.garshol.duke.comparators.Levenshtein;
-import no.priv.garshol.duke.utils.DefaultRecordIterator;
-import no.priv.garshol.duke.matchers.AbstractMatchListener;
-import no.priv.garshol.duke.matchers.PrintMatchListener;
 import no.priv.garshol.duke.datasources.InMemoryDataSource;
+import no.priv.garshol.duke.utils.DefaultRecordIterator;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class DeduplicatorTest {
   private ConfigurationImpl config;
@@ -35,7 +32,7 @@ public class DeduplicatorTest {
   public void setup() throws IOException {
     listener = new TestUtils.TestListener();
     Levenshtein comp = new Levenshtein();
-    List<Property> props = new ArrayList();
+    List<Property> props = new ArrayList<>();
     props.add(new PropertyImpl("ID"));
     props.add(new PropertyImpl("NAME", comp, 0.3, 0.8));
     props.add(new PropertyImpl("EMAIL", comp, 0.3, 0.8));
@@ -62,7 +59,7 @@ public class DeduplicatorTest {
   
   @Test
   public void testNoProperties() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord());
     records.add(TestUtils.makeRecord());
     processor.deduplicate(records);
@@ -72,7 +69,7 @@ public class DeduplicatorTest {
   
   @Test
   public void testDoesNotMatch() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "A"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "B"));
     processor.deduplicate(records);
@@ -82,7 +79,7 @@ public class DeduplicatorTest {
   
   @Test
   public void testDoesNotMatchEnough() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "A"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "A"));
     processor.deduplicate(records);
@@ -92,7 +89,7 @@ public class DeduplicatorTest {
   
   @Test
   public void testMatches1() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "aaaaa", "EMAIL", "BBBBB"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "aaaaa", "EMAIL", "BBBBB"));
     processor.deduplicate(records);
@@ -104,7 +101,7 @@ public class DeduplicatorTest {
 
   @Test
   public void testMatches2() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "AAAAA", "EMAIL", "BBBBB"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "AAAAA", "EMAIL", "BBBBB"));
     processor.deduplicate(records);
@@ -116,7 +113,7 @@ public class DeduplicatorTest {
   
   @Test
   public void testLuceneKeyword() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "AND", "EMAIL", "BBBBB"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "AND", "EMAIL", "BBBBB"));
     processor.deduplicate(records);
@@ -128,7 +125,7 @@ public class DeduplicatorTest {
   
   @Test
   public void testMultiToken() throws IOException {
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "aaaaaaaaa aaaaa",
                                      "EMAIL", "bbbbb"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "aaaaaaaaa aaaab",
@@ -146,7 +143,7 @@ public class DeduplicatorTest {
     config.setMaybeThreshold(0.0);
 
     // now lets try some matching
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "aaaaaa",
                                      "EMAIL", "bbbbb"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "bbbb",
@@ -173,7 +170,7 @@ public class DeduplicatorTest {
     config.getPropertyByName("EMAIL").setComparator(null);
 
     // now attempt to match
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1",
                                      "NAME", "aaaaa",
                                      "EMAIL", "BBBBB"));
@@ -194,7 +191,7 @@ public class DeduplicatorTest {
     prop.setIgnoreProperty(true);
 
     // now run, and see that it doesn't match
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1", "NAME", "aaaaa", "EMAIL", "BBBBB"));
     records.add(TestUtils.makeRecord("ID", "2", "NAME", "aaaaa", "EMAIL", "BBBBB"));
     processor.deduplicate(records);
@@ -209,7 +206,7 @@ public class DeduplicatorTest {
     // but <2000 would leave the records >1000 unprocessed
 
     // set up data source
-    Collection<Record> records = new ArrayList();
+    Collection<Record> records = new ArrayList<>();
     records.add(TestUtils.makeRecord("ID", "1",
                                      "NAME", "aaaaa",
                                      "EMAIL", "BBBBB"));
